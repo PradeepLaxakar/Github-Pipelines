@@ -1,0 +1,105 @@
+name: Terraform
+
+on:
+  push:
+    branches:
+      - development
+      - main
+    workflow_dispatch:
+
+env:
+  # Reference #
+  TF_VAR_KEY: ${{ secrets.KEY }}
+
+jobs:
+    terraform-plan:
+      runs-on: ubuntu-latest
+      environment: ${{ github.ref_name }}
+      steps:
+          - name: checkout code
+            uses: actions/checkout@v2
+          
+          - name: Azure Login
+            uses: azure/login@v2
+            with:
+              creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+          - name: Setup Terraform
+            uses: hashicorp/setup-terraform@v1
+
+          - name: Terraform Init
+            run: |
+              terraform init \
+                -var-file=environment/${{ github.ref_name }}.tfvars \
+                -backend-config="backend-${{ github.ref_name }}.tfvars" \
+                -backend-config="access_key=${{ secrets.STORAGE_ACCOUNT_ACCESS_KEY }}"
+            working-directory: ./
+
+          
+          - name: Terraform Validate
+            run: terraform validate
+            working-directory: ./
+
+          - name: Terraform Plan
+            run: terraform plan -var-file=environment/${{ github.ref_name }}.tfvars
+            working-directory: ./
+
+
+# // manual intervention for terraform apply
+    approve-terraform-apply:
+        needs: terraform-plan
+        runs-on: ubuntu-latest
+        
+        steps:
+            - uses: actions/checkout@v2
+
+            - name: Manual Intervention
+              uses: trstringer/manual-approval@v1
+              with:
+                secret: ${{ secrets.PAT_AI_voice_bot_infra }}
+                approvers: PradeepLaxakar #Case Sensitive
+                minimum-approvals: 1
+                issue-title: Terraform Apply
+                issue-body: to apply changes, please type - "approve", "yes" to accept or "deny", "no" to reject.
+
+
+# // terraform apply 
+    terraform-apply:
+      needs: approve-terraform-apply
+      runs-on: ubuntu-latest
+      environment: ${{ github.ref_name }}
+
+      steps:
+        - name: checkout code
+          uses: actions/checkout@v2
+        
+        - name: Azure Login
+          uses: azure/login@v2
+          with:
+            creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+        - name: Setup Terraform
+          uses: hashicorp/setup-terraform@v1
+
+        - name: Terraform Init
+          run: |
+            terraform init \
+              -var-file=environment/${{ github.ref_name }}.tfvars \
+              -backend-config="backend-${{ github.ref_name }}.tfvars" \
+              -backend-config="access_key=${{ secrets.STORAGE_ACCOUNT_ACCESS_KEY }}"
+          working-directory: ./
+
+        - name: Terraform Validate
+          run: terraform validate
+          working-directory: ./
+
+        - name: Terraform Plan
+          run: terraform plan -var-file=environment/${{ github.ref_name }}.tfvars -out=tfplan
+          working-directory: ./
+
+        - name: Terraform Apply
+          run: terraform apply -auto-approve tfplan
+
+# // END //
+
+
