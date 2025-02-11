@@ -56,7 +56,7 @@ jobs:
             - name: Manual Intervention
               uses: trstringer/manual-approval@v1
               with:
-                secret: ${{ secrets.PAT_AI_voice_bot_infra }}
+                secret: ${{ secrets.YOUR_PAT_TOKEN }}
                 approvers: PradeepLaxakar #Case Sensitive
                 minimum-approvals: 1
                 issue-title: Terraform Apply
