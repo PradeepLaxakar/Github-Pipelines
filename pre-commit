@@ -1,0 +1,19 @@
+# Using a Pre-Commit Hook (Local)
+
+# You can use a Git pre-commit hook to update the README before committing.
+
+# Create a .git/hooks/pre-commit file (make it executable using chmod +x .git/hooks/pre-commit).
+
+# Add the following script:
+
+#!/bin/bash
+BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+sed -i "s/BRANCH_PLACEHOLDER/$BRANCH_NAME/g" README.md
+
+
+
+# In your README, replace "main" with "BRANCH_PLACEHOLDER":
+
+terraform init -backend-config=backend-BRANCH_PLACEHOLDER.tfvars
+terraform plan -var-file=environment/BRANCH_PLACEHOLDER.tfvars
+terraform apply -var-file=environment/BRANCH_PLACEHOLDER.tfvars
