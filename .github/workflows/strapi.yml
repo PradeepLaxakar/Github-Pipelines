@@ -1,0 +1,89 @@
+name: strapi
+
+on:
+  push:
+    branches:
+      - development
+      - main
+    paths:
+      - strapi/**
+      - .github/workflows/strapi.yml
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2  
+
+      - name: Login to Azure Container Registry
+        uses: azure/docker-login@v2
+        with:
+          login-server: ${{ vars.ACR_LOGIN_SERVER }}
+          username: ${{ vars.ACR_USER_NAME }}
+          password: ${{ vars.ACR_USER_PASSWORD }}
+
+      - name: Build Docker image
+        run: |
+          cd strapi
+          docker build -t ${{ vars.ACR_LOGIN_SERVER }}/${{ vars.STRAPI_IMAGE_NAME }}:${{ github.run_number }} .
+          docker push ${{ vars.ACR_LOGIN_SERVER }}/${{ vars.STRAPI_IMAGE_NAME }}:${{ github.run_number }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name }}
+    steps:
+        - uses: actions/checkout@master
+
+        - uses: richardrigutins/replace-in-files@v1
+          with:
+            files: "./strapi/deployment/deployment.yml"
+            search-text: "_BUILD__ID_"
+            replacement-text: "${{ github.run_number }}"
+
+        - uses: richardrigutins/replace-in-files@v1
+          with:
+            files: "./strapi/deployment/deployment.yml"
+            search-text: "registry:image:tag"
+            replacement-text: ${{ vars.ACR_LOGIN_SERVER }}/${{ vars.STRAPI_IMAGE_NAME }}:${{ github.run_number }}
+
+        - uses: azure/setup-kubectl@v2.0
+
+        - uses: Azure/k8s-set-context@v2
+          with:
+            kubeconfig: ${{ secrets.KUBE_CONFIG }}
+
+        - uses: Azure/k8s-deploy@v4
+          with:
+            action: deploy
+            namespace: ${{ vars.KUBERNETES_NAMESPACE }}
+            manifests: |
+              ./strapi/deployment/deployment.yml
+                  
+# web app #          
+      # - name: Deploy to Azure Web App
+      #   uses: azure/webapps-deploy@v2
+      #   with:
+      #     app-name: ${{ vars.STRAPI_APP_NAME }} 
+      #     images: ${{ vars.ACR_LOGIN_SERVER }}/${{ vars.STRAPI_IMAGE_NAME }}:${{ github.run_number }}
+  
+      # - name: Add SCM_DO_BUILD_DURING_DEPLOYMENT setting
+      #   run: |
+      #     az webapp config appsettings set --name ${{ vars.STRAPI_APP_NAME }} \
+      #       --resource-group ${{ vars.RG_NAME }} \
+      #       --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true
+    
+    
+    
+    # END --------------------------------------
