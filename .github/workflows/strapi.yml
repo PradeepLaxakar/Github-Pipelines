@@ -2,9 +2,9 @@ name: strapi
 
 on:
   push:
-    branches:
-      - #development
-      - #main
+    # branches:
+    #   - development
+    #   - main
     paths:
       - strapi/**
       - .github/workflows/strapi.yml
