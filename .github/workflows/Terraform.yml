@@ -3,8 +3,8 @@ name: Terraform
 on:
   push:
     branches:
-      - development
-      - main
+      - #development
+      - #main
   workflow_dispatch:
 
 env:

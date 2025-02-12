@@ -30,4 +30,6 @@ Contributions are welcome! Feel free to:
 
 ---
 
-⚠️ **Note:** Ensure that your repository has the **required variables and secrets** configured for the workflows to function correctly.
+📢 **Note:** Ensure that your repository has the necessary **variables** and **secrets** configured for the workflows to function correctly.
+📢 **Note:** "Remember to uncomment the branch section to enable workflow triggers."
+
